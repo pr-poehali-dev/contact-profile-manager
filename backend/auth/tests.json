@@ -1,0 +1,26 @@
+{
+  "tests": [
+    {
+      "name": "Успешный вход администратора",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "action": "login",
+        "username": "admin",
+        "password": "admin123"
+      },
+      "expectedStatus": 200
+    },
+    {
+      "name": "Неудачный вход с неверным паролем",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "action": "login",
+        "username": "admin",
+        "password": "wrongpassword"
+      },
+      "expectedStatus": 401
+    }
+  ]
+}

@@ -18,21 +18,21 @@ def get_db_connection():
 def hash_password(password: str) -> str:
     return hashlib.sha256(password.encode()).hexdigest()
 
-def verify_password(password: str) -> bool:
+def verify_editor(username: str, password: str) -> bool:
     conn = get_db_connection()
     cur = conn.cursor()
     
     password_hash = hash_password(password)
-    cur.execute("SELECT password_hash FROM admin_settings WHERE id = 1")
+    cur.execute("""
+        SELECT id FROM editors 
+        WHERE username = %s AND password_hash = %s AND is_active = TRUE
+    """, (username, password_hash))
     result = cur.fetchone()
     
     cur.close()
     conn.close()
     
-    if result:
-        stored_hash = result['password_hash']
-        return password_hash == stored_hash
-    return False
+    return result is not None
 
 def get_contacts() -> List[Dict[str, Any]]:
     conn = get_db_connection()
@@ -114,24 +114,7 @@ def delete_contact(contact_id: int) -> bool:
     
     return deleted
 
-def update_password(new_password: str) -> bool:
-    conn = get_db_connection()
-    cur = conn.cursor()
-    
-    password_hash = hash_password(new_password)
-    cur.execute("""
-        UPDATE admin_settings 
-        SET password_hash = %s, updated_at = CURRENT_TIMESTAMP 
-        WHERE id = 1
-    """, (password_hash,))
-    
-    updated = cur.rowcount > 0
-    conn.commit()
-    
-    cur.close()
-    conn.close()
-    
-    return updated
+
 
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     method: str = event.get('httpMethod', 'GET')
@@ -142,7 +125,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             'headers': {
                 'Access-Control-Allow-Origin': '*',
                 'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type, X-Admin-Password',
+                'Access-Control-Allow-Headers': 'Content-Type, X-Editor-Username, X-Editor-Password',
                 'Access-Control-Max-Age': '86400'
             },
             'body': ''
@@ -162,9 +145,10 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             'body': json.dumps({'contacts': contacts})
         }
     
-    admin_password = headers.get('X-Admin-Password') or headers.get('x-admin-password')
+    editor_username = headers.get('X-Editor-Username') or headers.get('x-editor-username')
+    editor_password = headers.get('X-Editor-Password') or headers.get('x-editor-password')
     
-    if not admin_password or not verify_password(admin_password):
+    if not editor_username or not editor_password or not verify_editor(editor_username, editor_password):
         return {
             'statusCode': 401,
             'headers': {
@@ -172,34 +156,22 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 'Access-Control-Allow-Origin': '*'
             },
             'isBase64Encoded': False,
-            'body': json.dumps({'error': 'Неверный пароль администратора'})
+            'body': json.dumps({'error': 'Требуется авторизация'})
         }
     
     body_data = json.loads(event.get('body', '{}'))
     
     if method == 'POST':
-        if 'new_password' in body_data:
-            success = update_password(body_data['new_password'])
-            return {
-                'statusCode': 200,
-                'headers': {
-                    'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*'
-                },
-                'isBase64Encoded': False,
-                'body': json.dumps({'success': success})
-            }
-        else:
-            contact = create_contact(body_data)
-            return {
-                'statusCode': 201,
-                'headers': {
-                    'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*'
-                },
-                'isBase64Encoded': False,
-                'body': json.dumps({'contact': contact})
-            }
+        contact = create_contact(body_data)
+        return {
+            'statusCode': 201,
+            'headers': {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            },
+            'isBase64Encoded': False,
+            'body': json.dumps({'contact': contact})
+        }
     
     if method == 'PUT':
         contact_id = body_data.get('id')
