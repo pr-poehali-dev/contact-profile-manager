@@ -1,0 +1,25 @@
+{
+  "tests": [
+    {
+      "name": "Получение списка контактов",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "Создание контакта без пароля",
+      "method": "POST",
+      "path": "/",
+      "headers": {},
+      "body": {
+        "name": "Тест Тестов",
+        "telegram_username": "test_user"
+      },
+      "expectedStatus": 401,
+      "expectedBody": {
+        "error": "string"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
