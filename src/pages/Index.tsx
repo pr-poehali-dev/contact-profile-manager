@@ -34,6 +34,10 @@ export default function Index() {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [showEditorsDialog, setShowEditorsDialog] = useState(false);
+  const [showCreateEditorDialog, setShowCreateEditorDialog] = useState(false);
+  const [newEditorUsername, setNewEditorUsername] = useState('');
+  const [newEditorFullName, setNewEditorFullName] = useState('');
+  const [newEditorPassword, setNewEditorPassword] = useState('');
   const [loginUsername, setLoginUsername] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [oldPassword, setOldPassword] = useState('');
@@ -255,63 +259,151 @@ export default function Index() {
     }
   };
 
+  const handleCreateEditor = async () => {
+    if (!editor || !loginPassword || !newEditorUsername || !newEditorPassword) return;
+
+    try {
+      const response = await fetch(API_AUTH, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Editor-Username': editor.username,
+          'X-Editor-Password': loginPassword,
+        },
+        body: JSON.stringify({
+          action: 'create_editor',
+          username: newEditorUsername,
+          password: newEditorPassword,
+          full_name: newEditorFullName,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.editor) {
+        toast({
+          title: 'Успешно',
+          description: `Редактор ${newEditorUsername} создан`,
+        });
+        setShowCreateEditorDialog(false);
+        setNewEditorUsername('');
+        setNewEditorFullName('');
+        setNewEditorPassword('');
+        loadEditors();
+      } else {
+        toast({
+          title: 'Ошибка',
+          description: data.error || 'Не удалось создать редактора',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось создать редактора',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDeleteEditor = async (editorId: number) => {
+    if (!editor || !loginPassword) return;
+
+    try {
+      const response = await fetch(API_AUTH, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Editor-Username': editor.username,
+          'X-Editor-Password': loginPassword,
+        },
+        body: JSON.stringify({ id: editorId }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        toast({
+          title: 'Успешно',
+          description: 'Редактор удалён',
+        });
+        loadEditors();
+      } else {
+        toast({
+          title: 'Ошибка',
+          description: data.error || 'Не удалось удалить редактора',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось удалить редактора',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const openTelegram = (username: string) => {
     window.open(`https://t.me/${username}`, '_blank');
   };
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(34,197,94,0.1),transparent_50%)]" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(34,197,94,0.05),transparent_50%)]" />
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-accent/5" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(139,92,246,0.15),transparent_50%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,rgba(217,70,239,0.15),transparent_50%)]" />
+      <div className="absolute inset-0 opacity-30 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMzLjMxNCAwIDYgMi42ODYgNiA2cy0yLjY4NiA2LTYgNi02LTIuNjg2LTYtNiAyLjY4Ni02IDYtNiIgc3Ryb2tlPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMSkiLz48L2c+PC9zdmc+')]" />
       
       <div className="container mx-auto px-4 py-16 relative z-10">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-16 animate-fade-in">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-6">
-              <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-              <span className="text-xs uppercase tracking-widest text-primary font-mono">
-                Секретный доступ
+            <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full glass mb-8">
+              <div className="w-2 h-2 rounded-full bg-gradient-primary animate-pulse shadow-lg shadow-primary/50" />
+              <span className="text-xs uppercase tracking-widest font-semibold gradient-text">
+                Защищённый доступ
               </span>
             </div>
-            <h1 className="text-5xl md:text-7xl font-bold mb-6 text-foreground font-mono tracking-tighter">
-              КОНТАКТЫ
+            <h1 className="text-6xl md:text-8xl font-bold mb-6 gradient-text tracking-tight">
+              Контакты
             </h1>
-            <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto font-mono">
-              Защищённая система связи
+            <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto font-light">
+              Безопасная система связи с шифрованным доступом
             </p>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-12">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-12">
             {contacts.map((contact, index) => (
               <Card
                 key={contact.id}
-                className="p-6 bg-card/50 backdrop-blur-sm border-border/50 hover:border-primary/50 hover:bg-card/80 transition-all duration-300 hover:scale-105 animate-scale-in relative group overflow-hidden"
+                className="p-6 glass-card hover:bg-card/60 transition-all duration-500 hover:scale-105 hover:-translate-y-2 animate-scale-in relative group overflow-hidden shadow-xl hover:shadow-2xl hover:shadow-primary/20"
                 style={{ animationDelay: `${index * 100}ms` }}
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-accent/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-all duration-500" />
                 
                 <div className="flex flex-col items-center text-center space-y-4 relative z-10">
-                  <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-primary text-2xl font-bold font-mono border border-primary/20">
+                  <div className="w-20 h-20 rounded-2xl gradient-primary flex items-center justify-center text-white text-3xl font-bold shadow-lg shadow-primary/30 group-hover:shadow-primary/50 transition-shadow duration-300">
                     {contact.name.charAt(0)}
                   </div>
                   <div>
-                    <h3 className="font-semibold text-lg mb-1 font-mono">{contact.name}</h3>
+                    <h3 className="font-semibold text-xl mb-2">{contact.name}</h3>
                     {contact.position && (
-                      <p className="text-xs text-muted-foreground mb-3 font-mono uppercase tracking-wider">
+                      <p className="text-sm text-muted-foreground mb-3 uppercase tracking-wide font-medium">
                         {contact.position}
                       </p>
                     )}
                   </div>
                   <Button
                     onClick={() => openTelegram(contact.telegram_username)}
-                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-mono text-sm"
+                    className="w-full gradient-primary hover:opacity-90 text-white font-semibold shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 transition-all duration-300"
                   >
                     <Icon name="Send" className="mr-2 h-4 w-4" />
-                    Telegram
+                    Написать
                   </Button>
 
                   {editor && (
-                    <div className="flex gap-2 w-full opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <div className="flex gap-2 w-full opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                       <Button
                         variant="outline"
                         size="sm"
@@ -319,7 +411,7 @@ export default function Index() {
                           setEditingContact(contact);
                           setShowEditDialog(true);
                         }}
-                        className="flex-1 border-primary/20 hover:bg-primary/10"
+                        className="flex-1 glass hover:bg-primary/10 border-primary/30"
                       >
                         <Icon name="Edit" className="h-3 w-3" />
                       </Button>
@@ -327,7 +419,7 @@ export default function Index() {
                         variant="destructive"
                         size="sm"
                         onClick={() => handleDeleteContact(contact.id)}
-                        className="flex-1"
+                        className="flex-1 hover:bg-destructive/90"
                       >
                         <Icon name="Trash2" className="h-3 w-3" />
                       </Button>
@@ -342,7 +434,7 @@ export default function Index() {
             {!editor ? (
               <Button
                 onClick={() => setShowLoginDialog(true)}
-                className="group bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 font-mono"
+                className="group glass hover:bg-primary/10 border-primary/30 shadow-lg shadow-primary/10 hover:shadow-primary/20 transition-all duration-300"
               >
                 <Icon name="Lock" className="mr-2 h-4 w-4 group-hover:scale-110 transition-transform" />
                 Доступ для редакторов
@@ -354,15 +446,14 @@ export default function Index() {
                     setEditingContact({ display_order: contacts.length });
                     setShowEditDialog(true);
                   }}
-                  className="bg-primary hover:bg-primary/90 font-mono"
+                  className="gradient-primary hover:opacity-90 shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 transition-all duration-300"
                 >
                   <Icon name="Plus" className="mr-2 h-4 w-4" />
                   Добавить контакт
                 </Button>
                 <Button
                   onClick={() => setShowPasswordDialog(true)}
-                  variant="outline"
-                  className="border-primary/20 hover:bg-primary/10 font-mono"
+                  className="glass hover:bg-primary/10 border-primary/30"
                 >
                   <Icon name="Key" className="mr-2 h-4 w-4" />
                   Сменить пароль
@@ -370,15 +461,13 @@ export default function Index() {
                 {editor.is_super_admin && (
                   <Button
                     onClick={loadEditors}
-                    variant="outline"
-                    className="border-primary/20 hover:bg-primary/10 font-mono"
+                    className="glass hover:bg-accent/10 border-accent/30"
                   >
                     <Icon name="Users" className="mr-2 h-4 w-4" />
                     Редакторы
                   </Button>
                 )}
                 <Button
-                  variant="outline"
                   onClick={() => {
                     setEditor(null);
                     setLoginPassword('');
@@ -387,7 +476,7 @@ export default function Index() {
                       description: 'Доступ закрыт',
                     });
                   }}
-                  className="border-destructive/20 hover:bg-destructive/10 font-mono"
+                  className="glass hover:bg-destructive/10 border-destructive/30"
                 >
                   <Icon name="LogOut" className="mr-2 h-4 w-4" />
                   Выйти
@@ -399,16 +488,16 @@ export default function Index() {
       </div>
 
       <Dialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>
-        <DialogContent className="sm:max-w-md bg-card border-border">
+        <DialogContent className="sm:max-w-md glass-card">
           <DialogHeader>
-            <DialogTitle className="font-mono">Авторизация редактора</DialogTitle>
-            <DialogDescription className="font-mono text-sm">
+            <DialogTitle className="text-2xl gradient-text">Авторизация</DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground">
               Введите учётные данные для доступа к редактированию
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username" className="font-mono text-xs uppercase tracking-wider">
+              <Label htmlFor="username" className="text-xs uppercase tracking-wider font-semibold">
                 Логин
               </Label>
               <Input
@@ -417,12 +506,12 @@ export default function Index() {
                 onChange={(e) => setLoginUsername(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
                 placeholder="username"
-                className="font-mono bg-background/50"
+                className="glass"
                 autoComplete="username"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password" className="font-mono text-xs uppercase tracking-wider">
+              <Label htmlFor="password" className="text-xs uppercase tracking-wider font-semibold">
                 Пароль
               </Label>
               <Input
@@ -432,11 +521,11 @@ export default function Index() {
                 onChange={(e) => setLoginPassword(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
                 placeholder="••••••••"
-                className="font-mono bg-background/50"
+                className="glass"
                 autoComplete="current-password"
               />
             </div>
-            <Button onClick={handleLogin} className="w-full bg-primary hover:bg-primary/90 font-mono">
+            <Button onClick={handleLogin} className="w-full gradient-primary hover:opacity-90 shadow-lg shadow-primary/30">
               <Icon name="Unlock" className="mr-2 h-4 w-4" />
               Получить доступ
             </Button>
@@ -445,15 +534,15 @@ export default function Index() {
       </Dialog>
 
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="sm:max-w-md bg-card border-border">
+        <DialogContent className="sm:max-w-md glass-card">
           <DialogHeader>
-            <DialogTitle className="font-mono">
+            <DialogTitle className="text-2xl gradient-text">
               {editingContact?.id ? 'Редактировать контакт' : 'Добавить контакт'}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name" className="font-mono text-xs uppercase tracking-wider">
+              <Label htmlFor="name" className="text-xs uppercase tracking-wider font-semibold">
                 Имя
               </Label>
               <Input
@@ -463,11 +552,11 @@ export default function Index() {
                   setEditingContact({ ...editingContact, name: e.target.value })
                 }
                 placeholder="Иван Иванов"
-                className="font-mono bg-background/50"
+                className="glass"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="telegram" className="font-mono text-xs uppercase tracking-wider">
+              <Label htmlFor="telegram" className="text-xs uppercase tracking-wider font-semibold">
                 Telegram (без @)
               </Label>
               <Input
@@ -477,11 +566,11 @@ export default function Index() {
                   setEditingContact({ ...editingContact, telegram_username: e.target.value })
                 }
                 placeholder="username"
-                className="font-mono bg-background/50"
+                className="glass"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="position" className="font-mono text-xs uppercase tracking-wider">
+              <Label htmlFor="position" className="text-xs uppercase tracking-wider font-semibold">
                 Должность
               </Label>
               <Input
@@ -491,11 +580,11 @@ export default function Index() {
                   setEditingContact({ ...editingContact, position: e.target.value })
                 }
                 placeholder="Менеджер"
-                className="font-mono bg-background/50"
+                className="glass"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="order" className="font-mono text-xs uppercase tracking-wider">
+              <Label htmlFor="order" className="text-xs uppercase tracking-wider font-semibold">
                 Порядок
               </Label>
               <Input
@@ -508,10 +597,10 @@ export default function Index() {
                     display_order: parseInt(e.target.value) || 0,
                   })
                 }
-                className="font-mono bg-background/50"
+                className="glass"
               />
             </div>
-            <Button onClick={handleSaveContact} className="w-full bg-primary hover:bg-primary/90 font-mono">
+            <Button onClick={handleSaveContact} className="w-full gradient-primary hover:opacity-90 shadow-lg shadow-primary/30">
               Сохранить
             </Button>
           </div>
@@ -519,16 +608,16 @@ export default function Index() {
       </Dialog>
 
       <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
-        <DialogContent className="sm:max-w-md bg-card border-border">
+        <DialogContent className="sm:max-w-md glass-card">
           <DialogHeader>
-            <DialogTitle className="font-mono">Смена пароля</DialogTitle>
-            <DialogDescription className="font-mono text-sm">
+            <DialogTitle className="text-2xl gradient-text">Смена пароля</DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground">
               Введите текущий и новый пароль
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="old_password" className="font-mono text-xs uppercase tracking-wider">
+              <Label htmlFor="old_password" className="text-xs uppercase tracking-wider font-semibold">
                 Текущий пароль
               </Label>
               <Input
@@ -537,11 +626,11 @@ export default function Index() {
                 value={oldPassword}
                 onChange={(e) => setOldPassword(e.target.value)}
                 placeholder="••••••••"
-                className="font-mono bg-background/50"
+                className="glass"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="new_password" className="font-mono text-xs uppercase tracking-wider">
+              <Label htmlFor="new_password" className="text-xs uppercase tracking-wider font-semibold">
                 Новый пароль
               </Label>
               <Input
@@ -550,10 +639,10 @@ export default function Index() {
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="••••••••"
-                className="font-mono bg-background/50"
+                className="glass"
               />
             </div>
-            <Button onClick={handleChangePassword} className="w-full bg-primary hover:bg-primary/90 font-mono">
+            <Button onClick={handleChangePassword} className="w-full gradient-primary hover:opacity-90 shadow-lg shadow-primary/30">
               Изменить пароль
             </Button>
           </div>
@@ -561,34 +650,108 @@ export default function Index() {
       </Dialog>
 
       <Dialog open={showEditorsDialog} onOpenChange={setShowEditorsDialog}>
-        <DialogContent className="sm:max-w-2xl bg-card border-border">
+        <DialogContent className="sm:max-w-2xl glass-card">
           <DialogHeader>
-            <DialogTitle className="font-mono">Список редакторов</DialogTitle>
+            <DialogTitle className="text-2xl gradient-text">Список редакторов</DialogTitle>
           </DialogHeader>
-          <div className="space-y-2">
-            {editors.map((ed) => (
-              <div
-                key={ed.id}
-                className="flex items-center justify-between p-3 bg-background/50 rounded border border-border/50 font-mono text-sm"
-              >
-                <div>
-                  <div className="font-semibold">{ed.username}</div>
-                  <div className="text-xs text-muted-foreground">{ed.full_name}</div>
+          <div className="space-y-4">
+            <Button
+              onClick={() => {
+                setShowEditorsDialog(false);
+                setShowCreateEditorDialog(true);
+              }}
+              className="w-full gradient-primary hover:opacity-90 shadow-lg shadow-primary/30"
+            >
+              <Icon name="UserPlus" className="mr-2 h-4 w-4" />
+              Создать редактора
+            </Button>
+            <div className="space-y-2">
+              {editors.map((ed) => (
+                <div
+                  key={ed.id}
+                  className="flex items-center justify-between p-3 glass rounded-lg text-sm"
+                >
+                  <div>
+                    <div className="font-semibold">{ed.username}</div>
+                    <div className="text-xs text-muted-foreground">{ed.full_name}</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {ed.is_super_admin && (
+                      <span className="px-2 py-1 bg-primary/20 text-primary text-xs rounded">
+                        ADMIN
+                      </span>
+                    )}
+                    {!ed.is_active && (
+                      <span className="px-2 py-1 bg-destructive/20 text-destructive text-xs rounded">
+                        DISABLED
+                      </span>
+                    )}
+                    {!ed.is_super_admin && (
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => handleDeleteEditor(ed.id)}
+                      >
+                        <Icon name="Trash2" className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  {ed.is_super_admin && (
-                    <span className="px-2 py-1 bg-primary/20 text-primary text-xs rounded">
-                      ADMIN
-                    </span>
-                  )}
-                  {!ed.is_active && (
-                    <span className="px-2 py-1 bg-destructive/20 text-destructive text-xs rounded">
-                      DISABLED
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showCreateEditorDialog} onOpenChange={setShowCreateEditorDialog}>
+        <DialogContent className="sm:max-w-md glass-card">
+          <DialogHeader>
+            <DialogTitle className="text-2xl gradient-text">Создать редактора</DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground">
+              Введите данные нового редактора
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="new_username" className="text-xs uppercase tracking-wider font-semibold">
+                Логин
+              </Label>
+              <Input
+                id="new_username"
+                value={newEditorUsername}
+                onChange={(e) => setNewEditorUsername(e.target.value)}
+                placeholder="username"
+                className="glass"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new_full_name" className="text-xs uppercase tracking-wider font-semibold">
+                Полное имя
+              </Label>
+              <Input
+                id="new_full_name"
+                value={newEditorFullName}
+                onChange={(e) => setNewEditorFullName(e.target.value)}
+                placeholder="Иван Иванов"
+                className="glass"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new_editor_password" className="text-xs uppercase tracking-wider font-semibold">
+                Пароль
+              </Label>
+              <Input
+                id="new_editor_password"
+                type="password"
+                value={newEditorPassword}
+                onChange={(e) => setNewEditorPassword(e.target.value)}
+                placeholder="••••••••"
+                className="glass"
+              />
+            </div>
+            <Button onClick={handleCreateEditor} className="w-full gradient-primary hover:opacity-90 shadow-lg shadow-primary/30">
+              Создать
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
